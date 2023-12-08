@@ -15,8 +15,8 @@ Our code is based on PyTorch 1.8.1 and runnable for both windows and ubuntu serv
 
 ## Usage
 
-In this project, we provide the dataset Toys `./dataset/Amazon_Toys_and_Games`.  <br>
-If you want to realize more reproduction results, please download datasets from [RecSysDatasets](https://github.com/RUCAIBox/RecSysDatasets) or their [Google Drive](https://drive.google.com/drive/folders/1ahiLmzU7cGRPXf5qGMqtAChte2eYp9gI). And put the files in `./dataset/` like the following.
+Due to file size limitation, we only provide two datasets, Beauty(`./dataset/Amazon_Beauty`) and Toys(`./dataset/Amazon_Toys_and_Games`).  <br>
+Please download the other datasets from [RecSysDatasets](https://github.com/RUCAIBox/RecSysDatasets) or their [Google Drive](https://drive.google.com/drive/folders/1ahiLmzU7cGRPXf5qGMqtAChte2eYp9gI). And put the files in `./dataset/` like the following.
 
 ```
 $ tree
