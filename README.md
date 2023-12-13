@@ -5,7 +5,7 @@ The source code for our WSDM '24 paper [**"Multi-Sequence Attentive User Represe
 
 ## Preparation
 We train and evaluate our MSSR using a Tesla V100 PCIe GPU with 32 GB memory, where the CUDA version is 11.2. <br>
-Our code is based on PyTorch, which requires the following python packages:
+Our code is based on PyTorch, and requires the following python packages:
 
 > + numpy==1.21.6
 > + scipy==1.7.3 
