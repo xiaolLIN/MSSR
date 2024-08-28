@@ -198,9 +198,6 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
 
-        # self.model.trm_encoder.temp = self.temp_init
-        # self.logger.info('epoch {}, before training an epoch, current temp: {}'.format(epoch_idx, self.model.trm_encoder.temp))
-
         loss_func = loss_func or self.model.calculate_loss  # calculate_loss
         total_loss = None
         iter_data = (
@@ -219,11 +216,6 @@ class Trainer(AbstractTrainer):
             if torch.cuda.device_count() > 1 and self.multi_gpus:
                 interaction = self._trans_dataload(interaction)
             self.optimizer.zero_grad()
-
-            # if batch_idx > 1 and batch_idx % self.alternative_train_batch == 1:
-            #     # print('batch idx: ', batch_idx)
-            #     self.model.trm_encoder.temp = np.maximum(self.model.trm_encoder.temp * np.exp(-self.anneal_rate * batch_idx), self.temp_min)  # 0.0002
-            #     # print('temperature: ', self.model.trm_encoder.temp)
 
             losses = loss_func(interaction)
             if isinstance(losses, tuple):
@@ -420,7 +412,6 @@ class Trainer(AbstractTrainer):
                 self.tensorboard.add_scalar('Vaild_score', valid_score, epoch_idx)
 
                 if update_flag:
-                    self.logger.info('=================== update_flag ===================')
                     if  self.config['model'] == 'MSSR':
                         self.best_softmax_w = copy.deepcopy(self.model.trm_encoder.soft_fusion_w)
                         self.best_soft_wc = copy.deepcopy(self.model.trm_encoder.soft_fusion_w_c)
@@ -544,11 +535,7 @@ class Trainer(AbstractTrainer):
         self.eval_collector.model_collect(self.model)
         struct = self.eval_collector.get_data_struct()
         result = self.evaluator.evaluate(struct)
-
-        # delete the model file
-        # if self.del_model_file:
-        #     os.remove(self.saved_model_file)
-
+ 
         return result
 
     def _spilt_predict(self, interaction, batch_size):
