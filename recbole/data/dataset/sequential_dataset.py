@@ -116,10 +116,6 @@ class SequentialDataset(Dataset):
         target_index = np.array(target_index)
         item_list_length = np.array(item_list_length, dtype=np.int64)
 
-        # print('uid list: ', uid_list)
-        # print('item_list_index: ', item_list_index)
-        # print('target_index: ', target_index)
-        # print('item_list_length: ', item_list_length)
 
         new_length = len(item_list_index)
         new_data = self.inter_feat[target_index]
@@ -139,11 +135,6 @@ class SequentialDataset(Dataset):
                 value = self.inter_feat[field]
                 for i, (index, length) in enumerate(zip(item_list_index, item_list_length)):
                     new_dict[list_field][i][:length] = value[index]
-
-        # print('new dict: ', new_dict)
-        # for element in new_dict:
-        #     print(element)
-        #     print(new_dict[element].shape)
 
         new_data.update(Interaction(new_dict))
         self.inter_feat = new_data

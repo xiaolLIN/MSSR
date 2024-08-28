@@ -305,7 +305,6 @@ class Dataset(object):
             :obj:`~recbole.utils.enum_type.FeatureSource.ITEM_ID`
         """
         feat_path = os.path.join(dataset_path, f'{token}.{source.value}')
-        # print('feat path: ', feat_path)
 
         if os.path.isfile(feat_path):
             feat = self._load_feat(feat_path, source)
@@ -314,9 +313,7 @@ class Dataset(object):
             feat = None
             self.logger.debug(f'[{feat_path}] not found, [{source.value}] features are not loaded.')
 
-        # print('feat:', feat)
-        field = getattr(self, field_name, None) 
-        # print('field:', field)
+        field = getattr(self, field_name, None)
 
         if feat is not None and field is None:
             raise ValueError(f'{field_name} must be exist if {source.value}_feat exist.')
@@ -450,9 +447,7 @@ class Dataset(object):
                 continue
             df[field].fillna(value='', inplace=True)
             if ftype == FeatureType.TOKEN_SEQ:
-                # print(df[field])
                 df[field] = [np.array(list(filter(None, _.split(seq_separator)))) for _ in df[field].values]
-                # print(df[field])
             elif ftype == FeatureType.FLOAT_SEQ:
                 df[field] = [np.array(list(map(float, filter(None, _.split(seq_separator))))) for _ in df[field].values]
             self.field2seqlen[field] = max(map(len, df[field].values))
