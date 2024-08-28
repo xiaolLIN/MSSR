@@ -336,7 +336,7 @@ class MSSR(SequentialRecommender):
         self.attribute_predictor = config['attribute_predictor']
         self.temp = config['temp']
         self.ada_fuse = config['ada_fuse']
-        self.logit_num = config['logit_num']
+
         self.config = config
 
         # define layers and loss
@@ -383,10 +383,7 @@ class MSSR(SequentialRecommender):
                                     # final logits
                                     nn.Linear(in_features=self.hidden_size, out_features=self.n_attributes))
         elif self.attribute_predictor == 'linear':
-            if self.config['aap'] == 'ibce':
-                self.ap = nn.ModuleList([copy.deepcopy(nn.Linear(in_features=self.hidden_size, out_features=self.n_attributes[_]))
-                    for _ in self.selected_features])
-            elif self.config['aap'] == 'wi_wc_bce':       # sigmoid(Ws_i + Ws_c + b)
+            if self.config['aap'] == 'wi_wc_bce':
                 self.api = nn.ModuleList([copy.deepcopy(nn.Linear(in_features=self.hidden_size, out_features=self.n_attributes[_], bias=True))
                     for _ in self.selected_features])
                 self.apc = nn.ModuleList([copy.deepcopy(nn.Linear(in_features=self.attribute_hidden_size[b],
@@ -408,35 +405,25 @@ class MSSR(SequentialRecommender):
         self.dropout = nn.Dropout(self.hidden_dropout_prob)
 
         feat_num = len(self.selected_features)
-        if self.logit_num == 4:
-            repr_w = torch.empty(1, (1 + feat_num) ** 2)
-        elif self.logit_num == 2:
-            repr_w = torch.empty(1, (1 + feat_num))
-        self.repr_w = torch.nn.init.constant_(repr_w, val=1.0)
+
+        self.repr_w = torch.nn.init.constant_(torch.empty(1, (1 + feat_num)), val=1.0)
         self.logit_w = nn.Parameter(self.repr_w, requires_grad=True)
 
         if self.loss_type == 'BPR':
             self.loss_fct = BPRLoss()
         elif self.loss_type == 'CE':
             self.loss_fct = nn.CrossEntropyLoss()
-            if self.config['aap'] == 'ibce' or self.config['aap'] == 'wi_wc_bce' or self.config['aap'] == 'wiwc':
+            if self.config['aap'] == 'wi_wc_bce' or self.config['aap'] == 'wiwc':
                 self.attribute_loss_fct = nn.BCEWithLogitsLoss(reduction='none')
-            elif self.config['aap'] == 'ice':
-                self.attribute_loss_fct = nn.CrossEntropyLoss()
             else:
                 BPRLoss()
         else:
             raise NotImplementedError("Make sure 'loss_type' in ['BPR', 'CE']!")
 
-        if self.config['item_predictor'] == 2:
-            # if self.config['ip_gate_mode'] == 'is':
-            #     self.gating_linear = nn.Linear(in_features=2 * self.hidden_size + 2 * self.attribute_hidden_size[0],
-            #                                    out_features=1, bias=True)
-            if self.config['ip_gate_mode'] == 'moe':
-                self.gating_linear = nn.Linear(in_features=self.hidden_size + self.attribute_hidden_size[0],
-                                               out_features=1, bias=False)
-            if self.config['gate_drop'] == 1:
-                self.gating_dropout = nn.Dropout(self.hidden_dropout_prob)
+        if self.config['ip_mode'] == 'gating':
+            self.gating_linear = nn.Linear(in_features=self.hidden_size + self.attribute_hidden_size[0],
+                                           out_features=1, bias=False)
+            self.gating_dropout = nn.Dropout(self.hidden_dropout_prob)
             self.gating_sigmoid = nn.Sigmoid()
 
         self.batch_size = config['train_batch_size']
@@ -490,11 +477,7 @@ class MSSR(SequentialRecommender):
         fea_emb_layer_list = self.feature_embed_layer_list2 if auxiliary is True else self.feature_embed_layer_list
         feature_table = []
         for feature_embed_layer in fea_emb_layer_list:
-            if self.config['seqmc'] == 'cd_emb' or (auxiliary is True):   #  cd_emb only keep the second level category
-                sparse_embedding, dense_embedding = feature_embed_layer(None, item_seq, first_c=self.config['first_c'],
-                                                                        period='cd_emb', select_cate=self.config['sc'])
-            else:
-                sparse_embedding, dense_embedding = feature_embed_layer(None, item_seq, first_c=self.config['first_c'])
+            sparse_embedding, dense_embedding = feature_embed_layer(None, item_seq)
             sparse_embedding = sparse_embedding['item']  # [bs, L, 1, d_f]
             dense_embedding = dense_embedding['item']  # None
             # concat the sparse embedding and float embedding
@@ -509,11 +492,7 @@ class MSSR(SequentialRecommender):
         item_set_tensor = torch.tensor([list(range(item_num))], device=self.device)  # [1,I]
         feature_table = []
         for feature_embed_layer in self.feature_embed_layer_list:
-            if self.config['cdmc'] == 'cd_emb':   # only keep the second level category
-                sparse_embedding, dense_embedding = feature_embed_layer(None, item_set_tensor, first_c=self.config['first_c'],
-                                                                        period='cd_emb', select_cate=self.config['sc'])
-            else:
-                sparse_embedding, dense_embedding = feature_embed_layer(None, item_set_tensor, first_c=self.config['first_c'])
+            sparse_embedding, dense_embedding = feature_embed_layer(None, item_set_tensor)
 
             sparse_embedding = sparse_embedding['item']  # [1, I, 1, d_f]
             dense_embedding = dense_embedding['item']  # None
@@ -557,17 +536,10 @@ class MSSR(SequentialRecommender):
         logits = torch.cat((positive_samples, negative_samples), dim=1)
         return logits, labels
 
-    # def item_simi_gating(self, iseq_lst_emb, fseq_lst_emb, candi_iemb, candi_fea_emb):
-    #     concat = torch.cat((iseq_lst_emb, fseq_lst_emb, candi_iemb, candi_fea_emb), dim=-1)
-    #     output = self.gating_dropout(self.gating_linear(concat))
-    #     return self.gating_sigmoid(output).squeeze(-1)    # [B,I,4d]->[B,I,1]->[B,I]
 
     def item_pred_gating(self, a, b):
         concat = torch.cat((a,b), dim=-1)
-        if self.config['gate_drop'] == 1:
-            output = self.gating_dropout(self.gating_linear(concat))
-        else:
-            output = self.gating_linear(concat)
+        output = self.gating_dropout(self.gating_linear(concat))
         output = self.gating_sigmoid(output)
         return output
 
@@ -577,7 +549,7 @@ class MSSR(SequentialRecommender):
         return self.aap_gate_sigmoid(output)
 
     def forward(self, item_seq, item_seq_len):
-        self.item_seq_emb = self.item_embedding(item_seq)  # note that the input of this code have no side information_seq, seems in dataset
+        self.item_seq_emb = self.item_embedding(item_seq)
         position_ids = []
         item_seq_np = item_seq_len.cpu().numpy()
         for i_seq_len in item_seq_np:
@@ -596,7 +568,7 @@ class MSSR(SequentialRecommender):
         extended_attention_mask = self.get_attention_mask(item_seq)  # [bs, 1, L, L]
         trm_output, trm_output_attr = self.trm_encoder(input_emb, self.fea_seq_emb, position_embedding, extended_attention_mask, output_all_encoded_layers=True)
         output = trm_output[-1]  # the output of last layer [bs, L, d]
-        output_attr = trm_output_attr[self.config['clayer_num'] - 1]
+        output_attr = trm_output_attr[0]
         seq_output = self.gather_indexes(output, item_seq_len - 1)  # [bs, d]
         seq_output_attr = self.gather_indexes(output_attr, item_seq_len -1)
         # seq output [B, D]
@@ -622,29 +594,14 @@ class MSSR(SequentialRecommender):
         else:  # self.loss_type = 'CE'
             test_item_emb = self.item_embedding.weight # [I, d]
 
-            if self.config['pred'] == 'dot':
-                logits_ii = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
-                logits_cc = torch.matmul(seq_output_attr, feature_emb.transpose(0, 1))
+            logits_ii = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
+            logits_cc = torch.matmul(seq_output_attr, feature_emb.transpose(0, 1))
 
-            if self.logit_num == 4:
-                logits_ic = torch.matmul(seq_output, self.linear_w_ci(feature_emb).transpose(0, 1))
-                logits_ci = torch.matmul(seq_output_attr, self.linear_w_ic(test_item_emb).transpose(0, 1))
-                if self.config['item_predictor'] == 1:
-                    logits = self.soft_logit_w[0][0] * logits_ii + self.soft_logit_w[0][1] * logits_ic + \
-                             self.soft_logit_w[0][2] * logits_ci + self.soft_logit_w[0][3] * logits_cc
-                else:
-                    logits = logits_ii + logits_ic + logits_ci + logits_cc
-
-            elif self.logit_num == 2:
-                if self.config['item_predictor'] == 1:
-                    logits = self.soft_logit_w[0][0] * logits_ii + self.soft_logit_w[0][1] * logits_cc
-                elif self.config['item_predictor'] == 0:
-                    logits = logits_ii + logits_cc
-                else:   # gating  logit_i  logit_c
-                    if self.config['ip_gate_mode'] == 'moe':
-                        # seq output [B,d]
-                        gating = self.item_pred_gating(seq_output, seq_output_attr)  # [B, I]
-                        logits = gating * logits_ii + (1 - gating) * logits_cc
+            # gating  logit_i  logit_c
+            if self.config['ip_mode'] == 'gating':
+                # seq output [B,d]
+                gating = self.item_pred_gating(seq_output, seq_output_attr)  # [B, I]
+                logits = gating * logits_ii + (1 - gating) * logits_cc
 
             loss = self.loss_fct(logits, pos_items)
 
@@ -652,19 +609,7 @@ class MSSR(SequentialRecommender):
                 loss_dic = {'item_loss':loss}
                 attribute_loss_sum = 0
 
-                if self.config['aap'] == 'ibce':
-                    for i, a_predictor in enumerate(self.ap):
-                        attribute_logits = a_predictor(seq_output)  # [B, D] -> [B, total num of each fea]  [bs, 355]     [bs, num_features]
-                        attribute_labels = interaction.interaction[self.selected_features[i]]  # [bs, 14]
-                        attribute_labels = nn.functional.one_hot(attribute_labels, num_classes=self.n_attributes[self.selected_features[i]])
-                        if len(attribute_labels.shape) > 2:
-                            attribute_labels = attribute_labels.sum(dim=1)
-                        attribute_labels = attribute_labels.float()  # [bs, 355]
-                        attribute_loss = self.attribute_loss_fct(attribute_logits, attribute_labels)
-                        attribute_loss = torch.mean(attribute_loss[:, 1:])  # the first col of label is about zero, useless
-                        loss_dic[self.selected_features[i]] = attribute_loss
-
-                elif self.config['aap'] == 'wi_wc_bce':
+                if self.config['aap'] == 'wi_wc_bce':
                     for i, (api, apc) in enumerate(zip(self.api, self.apc)):
                         if self.config['aap_gate'] == 1:
                             aap_gating = self.side_pred_gating(seq_output, seq_output_attr)
@@ -744,22 +689,12 @@ class MSSR(SequentialRecommender):
         seq_output, seq_output_attr = self.forward(item_seq, item_seq_len)
         feature_emb = self.get_cd_fea_emb()
         test_items_emb = self.item_embedding.weight
-        if self.config['pred'] == 'dot':
-            score_ii = torch.matmul(seq_output, test_items_emb.transpose(0, 1))
-            score_cc = torch.matmul(seq_output_attr, feature_emb.transpose(0, 1))
 
-        if self.logit_num == 4:
-            score_ic = torch.matmul(seq_output, self.linear_w_ci(feature_emb).transpose(0, 1))
-            score_ci = torch.matmul(seq_output_attr, self.linear_w_ic(test_items_emb).transpose(0, 1))
-            scores = self.soft_logit_w[0][0] * score_ii + self.soft_logit_w[0][1] * score_ic + \
-                     self.soft_logit_w[0][2] * score_ci + self.soft_logit_w[0][3] * score_cc
+        score_ii = torch.matmul(seq_output, test_items_emb.transpose(0, 1))
+        score_cc = torch.matmul(seq_output_attr, feature_emb.transpose(0, 1))
 
-        elif self.logit_num == 2:
-            if self.config['item_predictor'] == 1 or self.config['item_predictor'] == 0:
-                scores = self.soft_logit_w[0][0] * score_ii + self.soft_logit_w[0][1] * score_cc
-            elif self.config['item_predictor'] == 2:
-                if self.config['ip_gate_mode'] == 'moe':
-                    gating = self.item_pred_gating(seq_output, seq_output_attr)  # [B, 1]
-                    scores = gating * score_ii + (1 - gating) * score_cc
+        if self.config['ip_mode'] == 'gating':
+            gating = self.item_pred_gating(seq_output, seq_output_attr)  # [B, 1]
+            scores = gating * score_ii + (1 - gating) * score_cc
 
         return scores
