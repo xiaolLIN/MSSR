@@ -1,5 +1,5 @@
 # MSSR
-The source code for our WSDM '24 paper [**"Multi-Sequence Attentive User Representation Learning for Side-information Integrated Sequential Recommendation"**](https://dl.acm.org/doi/10.1145/3616855.3635815)
+The source code for our WSDM 2024 paper [**"Multi-Sequence Attentive User Representation Learning for Side-information Integrated Sequential Recommendation"**](https://dl.acm.org/doi/10.1145/3616855.3635815)
 
 
 
