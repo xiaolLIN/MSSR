@@ -1264,20 +1264,14 @@ class ContextSeqEmbAbstractLayer(nn.Module):
         self.num_feature_field = {type: 0 for type in self.types}
 
         for type in self.types:
-            # print(self.field_names[type])
             for field_name in self.field_names[type]:
-                # print('===========', field_name)
                 if self.dataset.field2type[field_name] == FeatureType.TOKEN:
                     self.token_field_names[type].append(field_name)
                     self.token_field_dims[type].append(self.dataset.num(field_name))
-                    # print('layers.py: TOKEN')
                 elif self.dataset.field2type[field_name] == FeatureType.TOKEN_SEQ:
-                    # print('==================== \n layers.py: field name:', field_name)
                     self.token_seq_field_names[type].append(field_name)
-                    # print('==================== \n layers.py: dataset.num(field_name):', self.dataset.num(field_name))    
                     self.token_seq_field_dims[type].append(self.dataset.num(field_name))
                 else:
-                    # print('layers.py else')
                     self.float_field_names[type].append(field_name)
                     self.float_field_dims[type].append(self.dataset.num(field_name))
                 self.num_feature_field[type] += 1
@@ -1288,21 +1282,18 @@ class ContextSeqEmbAbstractLayer(nn.Module):
         """
         for type in self.types:
             if len(self.token_field_dims[type]) > 0:
-                # print('line 1305')
                 self.token_field_offsets[type] = np.array((0, *np.cumsum(self.token_field_dims[type])[:-1]),
                                                           dtype=np.long)
                 self.token_embedding_table[type] = FMEmbedding(
                     self.token_field_dims[type], self.token_field_offsets[type], self.embedding_size
                 ).to(self.device)
             if len(self.float_field_dims[type]) > 0:
-                # print('line 1318')
                 self.float_embedding_table[type] = nn.Embedding(
                     np.sum(self.float_field_dims[type], dtype=np.int32), self.embedding_size
                 ).to(self.device)
             if len(self.token_seq_field_dims) > 0:
                 self.token_seq_embedding_table[type] = nn.ModuleList()
                 for token_seq_field_dim in self.token_seq_field_dims[type]:
-                    # print('======================== \n token_seq_field_dim: ', token_seq_field_dim)    # 类别数
                     self.token_seq_embedding_table[type].append(
                         nn.Embedding(token_seq_field_dim, self.embedding_size).to(self.device)
                     )
@@ -1373,13 +1364,9 @@ class ContextSeqEmbAbstractLayer(nn.Module):
         for i, token_seq_field in enumerate(token_seq_fields):
             embedding_table = self.token_seq_embedding_table[type][i]
             mask = token_seq_field != 0  # [batch_size, max_item_length, seq_len]
-            # if not self.training:
-            #     print('embed_token_seq_fields:', token_seq_field.shape)            # [bs, L, 一个物品最多含有类别数 ]  [1,|I|,  ]
             mask = mask.float()
             value_cnt = torch.sum(mask, dim=-1, keepdim=True)  # [batch_size, max_item_length, 1]
             token_seq_embedding = embedding_table(token_seq_field)  # [batch_size, max_item_length, seq_len, embed_dim]
-            # if not self.training:
-            #     print('token_seq_embedding:', token_seq_embedding.shape)        # [bs, L, 一个物品最多含有类别数，d_f]  [1,|I|, ,d_f]
             mask = mask.unsqueeze(-1).expand_as(token_seq_embedding)
             if self.pooling_mode == 'max':
                 masked_token_seq_embedding = token_seq_embedding - (1 - mask) * 1e9
@@ -1411,7 +1398,7 @@ class ContextSeqEmbAbstractLayer(nn.Module):
         else:                                        # [bs, L, 1, d_f]     [1, |I|, 1, d_f]
             return torch.cat(fields_result, dim=-2)  # [batch_size, max_item_length, num_token_seq_field, embed_dim]
 
-    def embed_input_fields(self, user_idx, item_idx, period, select_cate, first_c):
+    def embed_input_fields(self, user_idx, item_idx):
         """Get the embedding of user_idx and item_idx
 
         Args:
@@ -1456,19 +1443,7 @@ class ContextSeqEmbAbstractLayer(nn.Module):
 
             token_seq_fields = []
             for field_name in self.token_seq_field_names[type]:
-                # if not self.training:
-                #     print('===========  user_item_idx[type]: ', user_item_idx[type].shape)  #   [b, L]   [1, |I| ]
                 feature = user_item_feat[type][field_name][user_item_idx[type]]
-                # if not self.training:
-                #     print('==========  feature: ', feature.shape)  # [b,L,一个物品最多同时有几个类]  [bs,L,14]   [1, |I|, 14]
-                # print(feature)
-
-                if first_c is not None and first_c == 0:
-                    feature[:, :, 0] = 0  # anyway, discard the first category.  Beauty
-                if period == 'cd_emb':        # candidate item category. only keep the second category
-                    feature[:, :, :select_cate] = 0
-                    feature[:, :, select_cate+1:] = 0
-
                 token_seq_fields.append(feature)
             # [batch_size, max_item_length, num_token_seq_field, embed_dim] or None
             token_seq_fields_embedding[type] = self.embed_token_seq_fields(token_seq_fields, type)
