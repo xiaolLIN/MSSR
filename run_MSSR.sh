@@ -4,7 +4,7 @@ result_file='result.txt'
 
 python run_model.py --gpu_id=1 --model=MSSR --dataset="yelp" \
            --ssl=1 --cl='idropwc' --tau=1 --cllmd=0.12 --sim='dot' \
-		       --n_layers=4 --n_heads=8  \
+	   --n_layers=4 --n_heads=8  \
            --aaplmd=9 --attribute_predictor='linear' --aap='wi_wc_bce' --aap_gate=1 \
            --ip_mode='gating'  \
            --train_batch_size=1024 --pooling_mode='mean' --config_files="configs/yelp_ac.yaml" \
