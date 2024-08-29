@@ -44,5 +44,5 @@ Run `run_MSSR.sh`. After training and evaluation, check out the final metrics in
 If you have any questions, please send an email to Xiaolin Lin (linxiaolin2021@email.szu.edu.com).
 
 ## Credit
-This repo is based on [RecBole](https://github.com/RUCAIBox/RecBole) and [DIF-SR](https://github.com/AIM-SE/DIF-SR).
+This repository is based on [RecBole](https://github.com/RUCAIBox/RecBole) and [DIF-SR](https://github.com/AIM-SE/DIF-SR).
 
