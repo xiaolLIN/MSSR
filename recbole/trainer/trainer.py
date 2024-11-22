@@ -412,12 +412,6 @@ class Trainer(AbstractTrainer):
                 self.tensorboard.add_scalar('Vaild_score', valid_score, epoch_idx)
 
                 if update_flag:
-                    if  self.config['model'] == 'MSSR':
-                        self.best_softmax_w = copy.deepcopy(self.model.trm_encoder.soft_fusion_w)
-                        self.best_soft_wc = copy.deepcopy(self.model.trm_encoder.soft_fusion_w_c)
-                        if self.config['logit_num'] > 1:
-                            self.best_soft_repr_w = self.model.soft_logit_w
-
                     if saved:
                         self._save_checkpoint(epoch_idx)
                         update_output = set_color('Saving current best', 'blue') + ': %s' % self.saved_model_file
