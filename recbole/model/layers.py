@@ -1466,7 +1466,8 @@ class ContextSeqEmbAbstractLayer(nn.Module):
         return sparse_embedding, dense_embedding
 
     def forward(self, user_idx, item_idx, first_c=None, period=None, select_cate=None):
-        return self.embed_input_fields(user_idx, item_idx, period, select_cate, first_c)
+        # return self.embed_input_fields(user_idx, item_idx, period, select_cate, first_c)
+        return self.embed_input_fields(user_idx, item_idx)
 
 
 class VanillaAttention2(nn.Module):
