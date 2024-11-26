@@ -43,6 +43,23 @@ Run `run_MSSR.sh`. After training and evaluation, check out the final metrics in
 ## Questions
 If you have any questions, please send an email to Xiaolin Lin (linxiaolin2021@email.szu.edu.com).
 
-## Credit
+## Acknowledgement
 This repository is based on [RecBole](https://github.com/RUCAIBox/RecBole) and [DIF-SR](https://github.com/AIM-SE/DIF-SR).
 
+## Citation
+```
+@inproceedings{lin2024MSSR,
+  author       = {Xiaolin Lin and
+                  Jinwei Luo and
+                  Junwei Pan and
+                  Weike Pan and
+                  Zhong Ming and
+                  Xun Liu and
+                  Shudong Huang and
+                  Jie Jiang}, 
+  title        = {Multi-Sequence Attentive User Representation Learning for Side-information Integrated Sequential Recommendation},
+  booktitle    = {Proceedings of the 17th {ACM} International Conference on Web Search and Data Mining},
+  pages        = {414--423}, 
+  year         = {2024}
+}
+```
