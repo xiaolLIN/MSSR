@@ -169,10 +169,8 @@ class ACGMultiHeadAttention(nn.Module):
         ac_attention = torch.permute(ac_raw_attention, (0, 2, 3, 1, 4))
         ac_attention_c = torch.permute(ac_raw_attention_c, (0, 2, 3, 1, 4))
 
-        self.fusion_w = fusion_w
-        self.fusion_wc = fusion_wc
-        if self.ada_fuse != 1:
-            self.fusion_w, self.fusion_wc = 1, 1
+        self.fusion_w = fusion_w.to(ac_attention.device)
+        self.fusion_wc = fusion_wc.to(ac_attention_c.device)
 
         if self.fusion_type == 'sum':
             ac_attention = torch.sum(ac_attention * self.fusion_w, dim=-2)
@@ -266,14 +264,14 @@ class ACGTransformerEncoder(nn.Module):
         self.feat_num = feat_num
         self.ada_fuse = ada_fuse
 
-        crs_w_i = torch.empty(1, (2 + feat_num) ** 2)
-        crs_w_c = torch.empty(1, (1 + feat_num) ** 2)
+        self.crs_w_i = torch.empty(1, (2 + feat_num) ** 2)
+        self.crs_w_c = torch.empty(1, (1 + feat_num) ** 2)
 
         self.fusion_type = fusion_type
 
         if self.ada_fuse == 1:
-            self.crs_w_i = torch.nn.init.constant_(crs_w_i, val=1.0)
-            self.crs_w_c = torch.nn.init.constant_(crs_w_c, val=1.0)
+            self.crs_w_i = torch.nn.init.constant_(self.crs_w_i, val=1.0)
+            self.crs_w_c = torch.nn.init.constant_(self.crs_w_c, val=1.0)
             self.fusion_wi = nn.Parameter(self.crs_w_i, requires_grad=True)
             self.fusion_wc = nn.Parameter(self.crs_w_c, requires_grad=True)
 
@@ -291,6 +289,8 @@ class ACGTransformerEncoder(nn.Module):
         if self.ada_fuse == 1:
             self.soft_fusion_w = nn.Softmax(dim=-1)(self.fusion_wi)
             self.soft_fusion_w_c = nn.Softmax(dim=-1)(self.fusion_wc)
+        else:
+            self.soft_fusion_w, self.soft_fusion_w_c = torch.ones_like(self.crs_w_i), torch.ones_like(self.crs_w_c)
 
         hidden_states_attr = attribute_hidden_states[0]   # attribute_hidden_states  list  each dim: [bs, L, 1, d_f]
         for layer_module in self.layer:
