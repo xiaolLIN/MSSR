@@ -580,7 +580,7 @@ class MSSR(SequentialRecommender):
 
         seq_output, seq_output_attr = self.forward(item_seq, item_seq_len)        # seq output:  [B, d]
         feature_emb = self.get_cd_fea_emb()
-        self.soft_logit_w = nn.Softmax(dim=-1)(self.logit_w)
+        # self.soft_logit_w = nn.Softmax(dim=-1)(self.logit_w)
 
         pos_items = interaction[self.POS_ITEM_ID]
         if self.loss_type == 'BPR':
@@ -599,9 +599,10 @@ class MSSR(SequentialRecommender):
 
             # gating  logit_i  logit_c
             if self.config['ip_mode'] == 'gating':
-                # seq output [B,d]
-                gating = self.item_pred_gating(seq_output, seq_output_attr)  # [B, I]
+                gating = self.item_pred_gating(seq_output, seq_output_attr)  # seq output [B,d]   [B, I]
                 logits = gating * logits_ii + (1 - gating) * logits_cc
+            else:
+                logits = logits_ii + logits_cc
 
             loss = self.loss_fct(logits, pos_items)
 
@@ -696,5 +697,6 @@ class MSSR(SequentialRecommender):
         if self.config['ip_mode'] == 'gating':
             gating = self.item_pred_gating(seq_output, seq_output_attr)  # [B, 1]
             scores = gating * score_ii + (1 - gating) * score_cc
-
+        else:
+            scores = score_cc + score_ii
         return scores
