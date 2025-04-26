@@ -4,7 +4,7 @@ The source code for our WSDM 2024 paper [**"Multi-Sequence Attentive User Repres
 
 
 ## Preparation
-We train and evaluate our MSSR using a Tesla V100 PCIe GPU with 32 GB memory, where the CUDA version is 11.2. <br>
+We train and evaluate our MSSR using a Tesla V100 PCIe GPU with 32 GB memory. <br>
 Our code is based on PyTorch, and requires the following python packages:
 
 > + numpy==1.21.6
@@ -15,7 +15,7 @@ Our code is based on PyTorch, and requires the following python packages:
 
 ## Usage
 
-Due to file size limitation, we only provide two datasets, Beauty `./dataset/Amazon_Beauty` and Toys `./dataset/Amazon_Toys_and_Games`.  <br>
+We provide two datasets, Beauty `./dataset/Amazon_Beauty` and Toys `./dataset/Amazon_Toys_and_Games`.  <br>
 Please download the other two datasets from [RecSysDatasets](https://github.com/RUCAIBox/RecSysDatasets) or their [Google Drive](https://drive.google.com/drive/folders/1ahiLmzU7cGRPXf5qGMqtAChte2eYp9gI). And put the files in `./dataset/` like the following.
 
 ```
